@@ -280,7 +280,7 @@ void arraylist_clear(arraylist *list){
     //         (*(list->handler))(*(void **)arraylist_get(list, i));
 
     if(list->handler)
-        arraylist_foreach(list, item)
+        arraylist_foreach(item, list)
             (*(list->handler))(*(void **)item);
 
     list->size = 0;
