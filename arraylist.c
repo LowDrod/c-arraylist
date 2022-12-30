@@ -154,13 +154,6 @@ void _arraylist_add_index(arraylist *list, void *value, size_t index){
         list->type * (list->size - index - 1)
     );
 
-    // #include <stdio.h>
-    // printf(
-    //     "V: %zu => MEM: %zu\n",
-    //     *(size_t *)value,
-    //     (size_t)((zone_to_move - list->values) / list->type)
-    // );
-
     memcpy(
         zone_to_move,
         value,
@@ -273,12 +266,6 @@ void arraylist_remove_range(arraylist *list, size_t start, size_t end){
 **/
 
 void arraylist_clear(arraylist *list){
-    // DELETEME
-
-    // if(list->handler)
-    //     for(size_t i = 0; i < list->size; i++)
-    //         (*(list->handler))(*(void **)arraylist_get(list, i));
-
     if(list->handler)
         arraylist_foreach(item, list)
             (*(list->handler))(*(void **)item);
