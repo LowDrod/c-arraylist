@@ -13,10 +13,10 @@ typedef struct arraylist{
     void (*handler)(void *);
 }arraylist;
 
-#define arraylist_foreach(list, item) \
-    _arraylist_foreach(((arraylist *)list), item)
+#define arraylist_foreach(item, list) \
+    _arraylist_foreach(item, ((arraylist *)list))
 
-#define _arraylist_foreach(list, item)                              \
+#define _arraylist_foreach(item, list)                              \
     for(                                                            \
         void *item = list->values,                                  \
             *_last_##item = list->values + list->size * list->type; \
@@ -24,10 +24,10 @@ typedef struct arraylist{
         item += list->type                                          \
     )
 
-#define arraylist_reverse_foreach(list, item) \
-    _arraylist_reverse_foreach(((arraylist *)list), item)
+#define arraylist_reverse_foreach(item, list) \
+    _arraylist_reverse_foreach(item, ((arraylist *)list))
 
-#define _arraylist_reverse_foreach(list, item)               \
+#define _arraylist_reverse_foreach(item, list)               \
     for(                                                     \
         void *item = list->values + list->size * list->type, \
             *_first_##item = list->values - list->type;      \
