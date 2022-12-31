@@ -89,7 +89,9 @@ void arraylist_allocate_all(arraylist *list, size_t size){
     if(list->size <= list->capacity)
         return;
 
-    list->capacity = (list->size / ARRAYLIST_CHUNK_SIZE + (list->size % ARRAYLIST_CHUNK_SIZE != 0)) * ARRAYLIST_CHUNK_SIZE;
+    unsigned remainder = list->size % ARRAYLIST_CHUNK_SIZE;
+
+    list->capacity = list->size + (remainder ? ARRAYLIST_CHUNK_SIZE - remainder : 0);
     list->values = realloc(list->values, list->capacity * list->type);
 }
 
