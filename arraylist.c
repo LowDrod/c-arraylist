@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
 #define ARRAYLIST_CHUNK_SIZE 10
 
@@ -13,26 +14,29 @@ typedef struct arraylist{
     void (*handler)(void *);
 }arraylist;
 
+// Foreach
+
 #define arraylist_foreach(item, list) \
     _arraylist_foreach(item, ((arraylist *)list))
 
-#define _arraylist_foreach(item, list)                              \
-    for(                                                            \
-        void *item = list->values,                                  \
-            *_last_##item = list->values + list->size * list->type; \
-        item != _last_##item;                                       \
-        item += list->type                                          \
+#define _arraylist_foreach(item, list)             \
+    for(                                           \
+        void *item = list->values, *_i_##item = 0; \
+        (size_t) _i_##item++ < list->size;         \
+        item += list->type                         \
     )
+
+// Reverse foreach
 
 #define arraylist_reverse_foreach(item, list) \
     _arraylist_reverse_foreach(item, ((arraylist *)list))
 
-#define _arraylist_reverse_foreach(item, list)               \
-    for(                                                     \
-        void *item = list->values + list->size * list->type, \
-            *_first_##item = list->values - list->type;      \
-        item != _first_##item;                               \
-        item -= list->type                                   \
+#define _arraylist_reverse_foreach(item, list)                     \
+    for(                                                           \
+        void *item = list->values + (list->size - 1) * list->type, \
+            *_i_##item = 0;                                        \
+        (size_t) _i_##item++ < list->size;                         \
+        item -= list->type                                         \
     )
 
 #define arraylist_create(type)      \
@@ -132,10 +136,10 @@ void arraylist_optimize(arraylist *list){
 **/
 
 #define arraylist_add(list, value) \
-    _arraylist_add_index(list, &value, list->size)
+    _arraylist_add_index(list, (intptr_t)value, list->size)
 
 #define arraylist_add_index(list,  value, index) \
-    _arraylist_add_index(list, &value, index)
+    _arraylist_add_index(list, (intptr_t)value, index)
 
 /**
  * Add an element to the arraylist based on an index
@@ -145,7 +149,7 @@ void arraylist_optimize(arraylist *list){
  * @param index position where the value will be inserted
 **/
 
-void _arraylist_add_index(arraylist *list, void *value, size_t index){
+void _arraylist_add_index(arraylist *list, intptr_t value, size_t index){
     arraylist_allocate(list);
 
     void *zone_to_move = list->values + index * list->type;
@@ -158,7 +162,7 @@ void _arraylist_add_index(arraylist *list, void *value, size_t index){
 
     memcpy(
         zone_to_move,
-        value,
+        &value,
         list->type
     );
 }

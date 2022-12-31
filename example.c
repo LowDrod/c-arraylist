@@ -6,7 +6,7 @@ void print_arraylist_char(arraylist *list){
 
     // NOTE: Item is a POINTER to the value
     arraylist_foreach(item, list){
-        printf("\"%c\" ", *(char *)item);
+        printf("\'%c\' ", *(char *)item);
     }
 
     printf("]\n");
@@ -24,15 +24,13 @@ int main(void){
     // arraylist_add(list, 'a');
 
     // Add value
-    char character = 'a';
-    arraylist_add(list, character);
+    arraylist_add(list, 'a');
 
     printf("\nAdding \'a\'\n");
     print_arraylist_char(list);
 
     // Add value by index
-    character++;
-    arraylist_add_index(list, character, 0);
+    arraylist_add_index(list, 'b', 0);
 
     printf("\nAdding \'b\' at index \"0\"\n");
     print_arraylist_char(list);
@@ -62,7 +60,7 @@ int main(void){
     // Delete range values
     arraylist_remove_range(list, list->size - 3, list->size - 1);
 
-    printf("\nRemoving from the last -2 to the last\n");
+    printf("\nRemoving last 3 values\n");
     print_arraylist_char(list);
 
     // ----- ----- ----- CLEAR ----- ----- ----- //
