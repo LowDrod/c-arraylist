@@ -96,10 +96,12 @@ void arraylist_allocate_all(arraylist *list, size_t size){
 **/
 
 void arraylist_optimize(arraylist *list){
-    if (list->capacity == (list->size / ARRAYLIST_CHUNK_SIZE + 1) * ARRAYLIST_CHUNK_SIZE)
+    if (list->capacity < list->size + ARRAYLIST_CHUNK_SIZE)
         return;
+    
+    unsigned remainder = list->size % ARRAYLIST_CHUNK_SIZE;
 
-    list->capacity = (list->size / ARRAYLIST_CHUNK_SIZE + (list->size % ARRAYLIST_CHUNK_SIZE != 0)) * ARRAYLIST_CHUNK_SIZE;
+    list->capacity = list->size + (remainder ? ARRAYLIST_CHUNK_SIZE - remainder : 0);
     list->values = realloc(list->values, list->capacity * list->type);
 }
 
@@ -221,7 +223,7 @@ void _arraylist_add_all_index(arraylist *list, size_t argc, void *values, size_t
  * @param index position of the value to remove
 **/
 
-void arraylist_remove_index(arraylist *list, size_t index){
+void arraylist_remove(arraylist *list, size_t index){
     if(list->handler)
         (*(list->handler))(*(void **)arraylist_get(list, index));
 
