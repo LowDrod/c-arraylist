@@ -20,9 +20,6 @@ int main(void){
 
     // ----- ----- ----- ADD ----- ----- ----- //
 
-    // NOTE: You CAN'T store a value directly
-    // arraylist_add(list, 'a');
-
     // Add value
     arraylist_add(list, 'a');
 
@@ -73,7 +70,7 @@ int main(void){
 
     // ----- ----- ----- OPTIMIZE ----- ----- ----- //
     
-    printf("\nOptimize\nBEFORE: Allocated space == %zu\n", list->capacity);
+    printf("\nOPTIMIZE\nBEFORE: Allocated space == %zu\n", list->capacity);
     arraylist_optimize(list);
     printf("AFTER:  Allocated space == %zu\n", list->capacity);
     
@@ -92,10 +89,63 @@ int main(void){
     // Add handler
     arraylist_set_handler(list, arraylist_free);
 
-    arraylist *nested_list = arraylist_create(unsigned);
-    arraylist_add(list, nested_list);
+    arraylist_add(list, arraylist_create(unsigned));
 
-    arraylist_free(list); // The handler automatically free the nested list
+    // The handler automatically free the nested list
+    arraylist_free(list);
+
+    // ----- ----- ----- CLONE ----- ----- ----- //
+    
+    list = arraylist_create(float);
+    
+    for (float number_d = 11.11; number_d < 60; number_d += 11.11){
+        arraylist_add(list, number_d);
+    }
+
+    arraylist *copy = arraylist_clone(list);
+
+    printf("\nORIGINAL\n");
+    arraylist_foreach(item, copy)
+        printf("%5.2f  ", *(float *)item);
+
+    printf("\n\nCOPY\n");
+    arraylist_foreach(item, copy)
+        printf("%5.2f  ", *(float *)item);
+
+    printf("\n");
+
+    arraylist_free(list);
+    
+    // ----- ----- ----- NESTING ----- ----- ----- //
+
+    printf("\n\t NESTING\n");
+
+    list = arraylist_create(arraylist *);
+    arraylist_set_handler(list, arraylist_free);
+    
+    unsigned number = 0;
+
+    for(unsigned i = 0; i < 22; i++){
+        arraylist_add(list, arraylist_create(unsigned));
+
+        arraylist *buffer = *(arraylist **)(arraylist_get(list, i));
+        for(unsigned j = 0; j < 6; j++){
+            arraylist_add(buffer, number++);
+        }
+    }
+    
+    printf("\n");
+
+    arraylist_foreach(list_unsigned, list){
+        arraylist_foreach(item, *(arraylist **)list_unsigned)
+            printf("%4u", *(unsigned *)item);
+
+        printf("\n");
+    }
+
+    printf("\n");
+
+    arraylist_free(list);
 
     return 0;
 }

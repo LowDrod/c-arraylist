@@ -17,30 +17,26 @@ typedef struct arraylist{
 // Foreach
 
 #define arraylist_foreach(item, list) \
-    _arraylist_foreach(item, ((arraylist *)list))
+    _arraylist_foreach(item, (list), _iterator_##item)
 
-#define _arraylist_foreach(item, list)             \
-    for(                                           \
-        void *item = list->values, *_i_##item = 0; \
-        (size_t) _i_##item++ < list->size;         \
-        item += list->type                         \
+#define _arraylist_foreach(item, list, i)  \
+    for(                                   \
+        void *item = list->values, *i = 0; \
+        (size_t) i++ < list->size;         \
+        item += list->type                 \
     )
 
 // Reverse foreach
 
 #define arraylist_reverse_foreach(item, list) \
-    _arraylist_reverse_foreach(item, ((arraylist *)list))
+    _arraylist_reverse_foreach(item, (list), _iterator_##item)
 
-#define _arraylist_reverse_foreach(item, list)                     \
-    for(                                                           \
-        void *item = list->values + (list->size - 1) * list->type, \
-            *_i_##item = 0;                                        \
-        (size_t) _i_##item++ < list->size;                         \
-        item -= list->type                                         \
+#define _arraylist_reverse_foreach(item, list, i)                          \
+    for(                                                                   \
+        void *item = list->values + (list->size - 1) * list->type, *i = 0; \
+        (size_t) i++ < list->size;                                         \
+        item -= list->type                                                 \
     )
-
-#define arraylist_create(type)      \
-    _arraylist_create(sizeof(type))
 
 /**
  * Creates a new arraylist
@@ -49,6 +45,9 @@ typedef struct arraylist{
  *
  * @return ponter to the new arraylist
 **/
+
+#define arraylist_create(type) \
+    _arraylist_create(sizeof(type))
 
 arraylist *_arraylist_create(unsigned type){
     arraylist *list = malloc(sizeof(arraylist));
@@ -138,10 +137,7 @@ void arraylist_optimize(arraylist *list){
 **/
 
 #define arraylist_add(list, value) \
-    _arraylist_add_index(list, (intptr_t)value, list->size)
-
-#define arraylist_add_index(list,  value, index) \
-    _arraylist_add_index(list, (intptr_t)value, index)
+    arraylist_add_index(list, value, (list)->size)
 
 /**
  * Add an element to the arraylist based on an index
@@ -151,7 +147,13 @@ void arraylist_optimize(arraylist *list){
  * @param index position where the value will be inserted
 **/
 
-void _arraylist_add_index(arraylist *list, intptr_t value, size_t index){
+#define arraylist_add_index(list, value, index)      \
+    {                                                \
+      typeof(value) _value = value;                  \
+      _arraylist_add_index((list), &_value, index);  \
+    }
+
+void _arraylist_add_index(arraylist *list, void *value, size_t index){
     arraylist_allocate(list);
 
     void *zone_to_move = list->values + index * list->type;
@@ -164,7 +166,7 @@ void _arraylist_add_index(arraylist *list, intptr_t value, size_t index){
 
     memcpy(
         zone_to_move,
-        &value,
+        value,
         list->type
     );
 }
@@ -177,11 +179,8 @@ void _arraylist_add_index(arraylist *list, intptr_t value, size_t index){
  * @param values values to store
 **/
 
-#define arraylist_add_all(list, argc, values)                   \
-    _arraylist_add_all_index(list, argc, values, list->size)
-
-#define arraylist_add_all_index(list, argc, values, index)      \
-    _arraylist_add_all_index(list, argc, values, index)
+#define arraylist_add_all(list, argc, values) \
+    _arraylist_add_all_index((list), argc, values, list->size)
 
 /**
  * Add an element to the arraylist based on an index
@@ -191,6 +190,9 @@ void _arraylist_add_index(arraylist *list, intptr_t value, size_t index){
  * @param values pointer to the array with the values
  * @param index position where the values will be inserted
 **/
+
+#define arraylist_add_all_index(list, argc, values, index) \
+    _arraylist_add_all_index((list), argc, values, index)
 
 void _arraylist_add_all_index(arraylist *list, size_t argc, void *values, size_t index){
     arraylist_allocate_all(list, argc);
@@ -268,9 +270,72 @@ void arraylist_remove_range(arraylist *list, size_t start, size_t end){
 }
 
 /**
- * Clear all the values from the list
+ * Return a slice of the arraylist
  *
- * @param list: arraylist to clear
+ * @param src arraylist to get the slice
+ * @param index index to start to copy from
+ * @param lenght amount to copy
+ *
+ * @return slice of the arraylist
+**/
+
+arraylist *arraylist_slice(arraylist *src, size_t index, size_t length){
+    arraylist *dest = malloc(sizeof(arraylist));
+
+    dest->type = src->type;
+    dest->size = length;
+    dest->handler = src->handler;
+
+    size_t capacity = length % ARRAYLIST_CHUNK_SIZE;
+    dest->capacity = src->size + (capacity ? ARRAYLIST_CHUNK_SIZE - capacity : 0);
+
+    dest->values = malloc(dest->type * dest->capacity);
+
+    memcpy(
+        dest->values,
+        src->values + index * src->type,
+        dest->type * length
+    );
+
+    return dest;
+}
+
+/**
+ * Return a clone of the arraylist
+ *
+ * @param list arraylist to clone
+ *
+ * @return clone of the arraylist
+**/
+
+#define arraylist_clone(list) \
+	arraylist_slice(list, 0, list->size)
+
+/**
+ * Insert an arraylist into another at the given index
+ *
+ * @param dest arraylist to insert the other
+ * @param src arraylist to copy
+ * @param index position in which the arraylist will be inserted
+**/
+
+#define arraylist_join_index(dest, src, index) \
+    arraylist_add_all_index(dest, (src)->size, (src)->values, index)
+
+/**
+ * Insert an arraylist into another
+ *
+ * @param dest arraylist to insert the other
+ * @param src arraylist to copy
+**/
+
+#define arraylist_join(dest, src) \
+	arraylist_join_index(dest, src, (dest)->size)
+
+/**
+ * Clear all the values from the arraylist
+ *
+ * @param list arraylist to clear
 **/
 
 void arraylist_clear(arraylist *list){
@@ -282,9 +347,9 @@ void arraylist_clear(arraylist *list){
 }
 
 /**
- * Free the list
+ * Free the arraylist
  *
- * @param list: arraylist to free
+ * @param list arraylist to free
 **/
 
 void arraylist_free(arraylist *list){
