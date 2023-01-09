@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "arraylist.c"
+#include "arraylist.h"
 
 void print_arraylist_char(arraylist *list){
     printf("[ ");
