@@ -148,10 +148,10 @@ void arraylist_optimize(arraylist *list){
 **/
 
 #define arraylist_add_index(list, value, index)      \
-    {                                                \
+    do {                                             \
       typeof(value) _value = value;                  \
       _arraylist_add_index((list), &_value, index);  \
-    }
+    } while (0)
 
 void _arraylist_add_index(arraylist *list, void *value, size_t index){
     arraylist_allocate(list);
