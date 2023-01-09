@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdint.h>
 
-#define ARRAYLIST_CHUNK_SIZE 10
+#define ARRAYLIST_CHUNK_SIZE 16
 
 typedef struct arraylist{
     void *values;
@@ -53,6 +53,30 @@ arraylist *_arraylist_create(unsigned type){
     arraylist *list = malloc(sizeof(arraylist));
 
     list->values = malloc(type * ARRAYLIST_CHUNK_SIZE);
+    list->type = type;
+    list->size = 0;
+    list->capacity = ARRAYLIST_CHUNK_SIZE;
+    list->handler = NULL;
+
+    return list;
+}
+
+/**
+ * Creates a new arraylist with custom initial size
+ *
+ * @param type size of the type to contain
+ * @param size initial size
+ *
+ * @return ponter to the new arraylist
+**/
+
+#define arraylist_create_size(type, size) \
+    _arraylist_create_size(sizeof(type), size)
+
+arraylist *_arraylist_create_size(unsigned type, size_t size){
+    arraylist *list = malloc(sizeof(arraylist));
+
+    list->values = malloc(type * size);
     list->type = type;
     list->size = 0;
     list->capacity = ARRAYLIST_CHUNK_SIZE;
