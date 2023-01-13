@@ -142,7 +142,7 @@ void arraylist_optimize(arraylist *list){
 **/
 
 #define arraylist_set_handler(list, new_handler) \
-    list->handler = (void *)new_handler
+    (list)->handler = (void *)(new_handler)
 
 /**
  * Remove the handler from the arraylist
@@ -151,7 +151,7 @@ void arraylist_optimize(arraylist *list){
 **/
 
 #define arraylist_remove_handler(list) \
-    list->handler = NULL
+    (list)->handler = NULL
 
 /**
  * Add an element to the end of the arraylist
@@ -171,10 +171,10 @@ void arraylist_optimize(arraylist *list){
  * @param index position where the value will be inserted
 **/
 
-#define arraylist_add_index(list, value, index)      \
-    do {                                             \
-      typeof(value) _value = value;                  \
-      _arraylist_add_index((list), &_value, index);  \
+#define arraylist_add_index(list, value, index)    \
+    do {                                           \
+      typeof(value) _value = value;                \
+      _arraylist_add_index(list, &_value, index);  \
     } while (0)
 
 void _arraylist_add_index(arraylist *list, void *value, size_t index){
@@ -204,7 +204,7 @@ void _arraylist_add_index(arraylist *list, void *value, size_t index){
 **/
 
 #define arraylist_add_all(list, argc, values) \
-    _arraylist_add_all_index((list), argc, values, list->size)
+    arraylist_add_all_index(list, argc, values, (list)->size)
 
 /**
  * Add an element to the arraylist based on an index
@@ -215,10 +215,7 @@ void _arraylist_add_index(arraylist *list, void *value, size_t index){
  * @param index position where the values will be inserted
 **/
 
-#define arraylist_add_all_index(list, argc, values, index) \
-    _arraylist_add_all_index((list), argc, values, index)
-
-void _arraylist_add_all_index(arraylist *list, size_t argc, void *values, size_t index){
+void arraylist_add_all_index(arraylist *list, size_t argc, void *values, size_t index){
     arraylist_allocate_all(list, argc);
 
     void *zone_to_move = list->values + index * list->type;
@@ -246,7 +243,7 @@ void _arraylist_add_all_index(arraylist *list, size_t argc, void *values, size_t
 **/
 
 #define arraylist_get(list, index) \
-    (list->values + (list->type * index))
+    ((list)->values + ((list)->type * (index)))
 
 /**
  * Delete an elements of the arraylist
@@ -333,7 +330,7 @@ arraylist *arraylist_slice(arraylist *src, size_t index, size_t length){
 **/
 
 #define arraylist_clone(list) \
-	arraylist_slice(list, 0, list->size)
+	arraylist_slice(list, 0, (list)->size)
 
 /**
  * Insert an arraylist into another at the given index
