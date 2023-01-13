@@ -50,7 +50,7 @@ typedef struct arraylist{
     _arraylist_create(sizeof(type))
 
 arraylist *_arraylist_create(unsigned type){
-    arraylist *list = malloc(sizeof(arraylist));
+    arraylist *list = (arraylist *) malloc(sizeof(arraylist));
 
     list->values = malloc(type * ARRAYLIST_CHUNK_SIZE);
     list->type = type;
@@ -74,7 +74,7 @@ arraylist *_arraylist_create(unsigned type){
     _arraylist_create_size(sizeof(type), size)
 
 arraylist *_arraylist_create_size(unsigned type, size_t size){
-    arraylist *list = malloc(sizeof(arraylist));
+    arraylist *list = (arraylist *) malloc(sizeof(arraylist));
 
     list->values = malloc(type * size);
     list->type = type;
@@ -301,7 +301,7 @@ void arraylist_remove_range(arraylist *list, size_t start, size_t end){
 **/
 
 arraylist *arraylist_slice(arraylist *src, size_t index, size_t length){
-    arraylist *dest = malloc(sizeof(arraylist));
+    arraylist *dest = (arraylist *) malloc(sizeof(arraylist));
 
     dest->type = src->type;
     dest->size = length;
