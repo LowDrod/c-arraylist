@@ -1,10 +1,12 @@
-#pragma once
+#ifndef ARRAYLIST_H
+#define ARRAYLIST_H
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
 
-#define ARRAYLIST_CHUNK_SIZE 16
+#define ARRAYLIST_INITIAL_CAPACITY 16
+#define ARRAYLIST_GROWTH_FACTOR 2
 
 typedef struct arraylist{
     void *values;
@@ -19,11 +21,11 @@ typedef struct arraylist{
 #define arraylist_foreach(item, list) \
     _arraylist_foreach(item, (list), _iterator_##item)
 
-#define _arraylist_foreach(item, list, i)  \
-    for(                                   \
-        void *item = list->values, *i = 0; \
-        (size_t) i++ < list->size;         \
-        item += list->type                 \
+#define _arraylist_foreach(item, list, i)                 \
+    for(                                                  \
+        uintptr_t item = (uintptr_t) list->values, i = 0; \
+        i++ < list->size;                                 \
+        item += list->type                                \
     )
 
 // Reverse foreach
@@ -31,11 +33,11 @@ typedef struct arraylist{
 #define arraylist_reverse_foreach(item, list) \
     _arraylist_reverse_foreach(item, (list), _iterator_##item)
 
-#define _arraylist_reverse_foreach(item, list, i)                          \
-    for(                                                                   \
-        void *item = list->values + (list->size - 1) * list->type, *i = 0; \
-        (size_t) i++ < list->size;                                         \
-        item -= list->type                                                 \
+#define _arraylist_reverse_foreach(item, list, i)                                          \
+    for(                                                                                   \
+        uintptr_t item = ((uintptr_t)list->values) + (list->size - 1) * list->type, i = 0; \
+        i++ < list->size;                                                                  \
+        item -= list->type                                                                 \
     )
 
 /**
@@ -52,10 +54,10 @@ typedef struct arraylist{
 arraylist *_arraylist_create(unsigned type){
     arraylist *list = (arraylist *) malloc(sizeof(arraylist));
 
-    list->values = malloc(type * ARRAYLIST_CHUNK_SIZE);
+    list->values = malloc(type * ARRAYLIST_INITIAL_CAPACITY);
     list->type = type;
     list->size = 0;
-    list->capacity = ARRAYLIST_CHUNK_SIZE;
+    list->capacity = ARRAYLIST_INITIAL_CAPACITY;
     list->handler = NULL;
 
     return list;
@@ -76,46 +78,83 @@ arraylist *_arraylist_create(unsigned type){
 arraylist *_arraylist_create_size(unsigned type, size_t size){
     arraylist *list = (arraylist *) malloc(sizeof(arraylist));
 
-    list->values = malloc(type * size);
+    size_t initial_capacity = ARRAYLIST_INITIAL_CAPACITY;
+
+    if (size > initial_capacity){
+        size_t tmp = size / ARRAYLIST_INITIAL_CAPACITY;
+        initial_capacity *= ARRAYLIST_GROWTH_FACTOR;
+
+        while (tmp > ARRAYLIST_GROWTH_FACTOR) {
+            tmp /= ARRAYLIST_GROWTH_FACTOR;
+            initial_capacity *= ARRAYLIST_GROWTH_FACTOR;
+        }
+    }
+
+    list->values = malloc(type * initial_capacity);
     list->type = type;
     list->size = 0;
-    list->capacity = ARRAYLIST_CHUNK_SIZE;
+    list->capacity = initial_capacity;
     list->handler = NULL;
 
     return list;
 }
 
 /**
- * Reallocate the values array if is necessary
+ * Reallocate space for the new value
  *
  * @param list arraylist to resize
+ * @param index position where the value will be inserted
+ *
+ * @return address where the value will be inserted
 **/
 
-void arraylist_allocate(arraylist *list){
-    if(list->size++ < list->capacity)
-        return;
+void *arraylist_allocate(arraylist *list, size_t index){
+    if(list->size++ >= list->capacity){
+        list->capacity *= ARRAYLIST_GROWTH_FACTOR;
+        list->values = realloc(list->values, list->capacity * list->type);
+    }
+    
+    char *zone_to_move = ((char *)list->values) + index * list->type;
 
-    list->capacity += ARRAYLIST_CHUNK_SIZE;
-    list->values = realloc(list->values, list->capacity * list->type);
+    memmove(
+        zone_to_move + list->type,
+        zone_to_move,
+        list->type * (list->size - index - 1)
+    );
+
+    return zone_to_move;
 }
 
 /**
- * Reallocate the values array if is necessary
+ * Reallocate space for the new values
  *
  * @param list arraylist to resize
+ * @param index position where the values will be inserted
  * @param size size to resize
+ *
+ * @return address where the values will be inserted
 **/
 
-void arraylist_allocate_all(arraylist *list, size_t size){
+void *arraylist_allocate_all(arraylist *list, size_t index, size_t size){
     list->size += size;
 
-    if(list->size <= list->capacity)
-        return;
+    if(list->size > list->capacity){
+        do {
+            list->capacity *= ARRAYLIST_GROWTH_FACTOR;
+        } while (list->capacity < list->size);
 
-    unsigned remainder = list->size % ARRAYLIST_CHUNK_SIZE;
+        list->values = realloc(list->values, list->capacity * list->type);
+    }
 
-    list->capacity = list->size + (remainder ? ARRAYLIST_CHUNK_SIZE - remainder : 0);
-    list->values = realloc(list->values, list->capacity * list->type);
+    char *zone_to_move = ((char *)list->values) + index * list->type;
+
+    memmove(
+        zone_to_move + size * list->type,
+        zone_to_move,
+        list->type * (list->size - index - size)
+    );
+
+    return zone_to_move;
 }
 
 /*
@@ -125,12 +164,19 @@ void arraylist_allocate_all(arraylist *list, size_t size){
 **/
 
 void arraylist_optimize(arraylist *list){
-    if (list->capacity < list->size + ARRAYLIST_CHUNK_SIZE)
+    if (list->size == 0) {
+        list->capacity = ARRAYLIST_INITIAL_CAPACITY;
+        list->values = realloc(list->values, list->type * ARRAYLIST_INITIAL_CAPACITY);
+        return;
+    }
+
+    if (list->capacity / ARRAYLIST_GROWTH_FACTOR < list->size)
         return;
     
-    unsigned remainder = list->size % ARRAYLIST_CHUNK_SIZE;
+    while (list->capacity >= list->size)
+        list->capacity /= ARRAYLIST_GROWTH_FACTOR;
 
-    list->capacity = list->size + (remainder ? ARRAYLIST_CHUNK_SIZE - remainder : 0);
+    list->capacity *= ARRAYLIST_GROWTH_FACTOR;
     list->values = realloc(list->values, list->capacity * list->type);
 }
 
@@ -171,29 +217,8 @@ void arraylist_optimize(arraylist *list){
  * @param index position where the value will be inserted
 **/
 
-#define arraylist_add_index(list, value, index)    \
-    do {                                           \
-      typeof(value) _value = value;                \
-      _arraylist_add_index(list, &_value, index);  \
-    } while (0)
-
-void _arraylist_add_index(arraylist *list, void *value, size_t index){
-    arraylist_allocate(list);
-
-    void *zone_to_move = list->values + index * list->type;
-
-    memmove(
-        zone_to_move + list->type,
-        zone_to_move,
-        list->type * (list->size - index - 1)
-    );
-
-    memcpy(
-        zone_to_move,
-        value,
-        list->type
-    );
-}
+#define arraylist_add_index(list, value, index) \
+    memcpy(arraylist_allocate(list, index), value, (list)->type);
 
 /**
  * Add an array of elements to the end of the arraylist
@@ -215,23 +240,8 @@ void _arraylist_add_index(arraylist *list, void *value, size_t index){
  * @param index position where the values will be inserted
 **/
 
-void arraylist_add_all_index(arraylist *list, size_t argc, void *values, size_t index){
-    arraylist_allocate_all(list, argc);
-
-    void *zone_to_move = list->values + index * list->type;
-
-    memmove(
-        zone_to_move + argc * list->type,
-        zone_to_move,
-        list->type * (list->size - index - argc)
-    );
-
-    memcpy(
-        zone_to_move,
-        values,
-        list->type * argc
-    );
-}
+#define arraylist_add_all_index(list, argc, values, index) \
+    memcpy(arraylist_allocate_all(list, index, argc), values, list->type * argc)
 
 /**
  * Return a pointer to a value based in an index
@@ -243,7 +253,7 @@ void arraylist_add_all_index(arraylist *list, size_t argc, void *values, size_t 
 **/
 
 #define arraylist_get(list, index) \
-    ((list)->values + ((list)->type * (index)))
+    (((uintptr_t)(list)->values) + ((list)->type * (index)))
 
 /**
  * Delete an elements of the arraylist
@@ -257,7 +267,7 @@ void arraylist_remove(arraylist *list, size_t index){
         (*(list->handler))(*(void **)arraylist_get(list, index));
 
     list->size--;
-    void *zone_to_move = list->values + index * list->type;
+    char *zone_to_move = ((char *)list->values) + index * list->type;
     
     memcpy(
         zone_to_move,
@@ -282,8 +292,8 @@ void arraylist_remove_range(arraylist *list, size_t start, size_t end){
             (*(list->handler))(*(void **)arraylist_get(list, i));
 
     memcpy(
-        list->values + start * list->type,
-        list->values + end * list->type,
+        ((char *)list->values) + start * list->type,
+        ((char *)list->values) + end * list->type,
         (list->size - end) * list->type
     );
 
@@ -300,22 +310,23 @@ void arraylist_remove_range(arraylist *list, size_t start, size_t end){
  * @return slice of the arraylist
 **/
 
-arraylist *arraylist_slice(arraylist *src, size_t index, size_t length){
+arraylist *arraylist_slice(arraylist *src, size_t index, size_t size){
     arraylist *dest = (arraylist *) malloc(sizeof(arraylist));
 
     dest->type = src->type;
-    dest->size = length;
+    dest->size = size;
     dest->handler = src->handler;
 
-    size_t capacity = length % ARRAYLIST_CHUNK_SIZE;
-    dest->capacity = src->size + (capacity ? ARRAYLIST_CHUNK_SIZE - capacity : 0);
+    dest->capacity = ARRAYLIST_INITIAL_CAPACITY;
+    while (dest->capacity < size)
+        dest->capacity *= ARRAYLIST_GROWTH_FACTOR;
 
     dest->values = malloc(dest->type * dest->capacity);
 
     memcpy(
         dest->values,
-        src->values + index * src->type,
-        dest->type * length
+        ((char *)src->values) + index * src->type,
+        dest->type * size
     );
 
     return dest;
@@ -382,4 +393,4 @@ void arraylist_free(arraylist *list){
 }
 
 #undef ARRAYLIST_CHUNK_SIZE
-
+#endif // ARRAYLIST_H

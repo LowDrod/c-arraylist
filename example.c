@@ -21,13 +21,21 @@ int main(void){
     // ----- ----- ----- ADD ----- ----- ----- //
 
     // Add value
-    arraylist_add(list, 'a');
+    char c = 'a';
+    arraylist_add(list, &c);
 
     printf("\nAdding \'a\'\n");
     print_arraylist_char(list);
 
+    // Add value
+    *((char *)arraylist_allocate(list, list->size)) = 'z';
+
+    printf("\nAdding \'z\' at the end\n");
+    print_arraylist_char(list);
+
     // Add value by index
-    arraylist_add_index(list, 'b', 0);
+    c = 'b';
+    arraylist_add_index(list, &c, 0);
 
     printf("\nAdding \'b\' at index \"0\"\n");
     print_arraylist_char(list);
@@ -47,7 +55,7 @@ int main(void){
     print_arraylist_char(list);
 
     // ----- ----- ----- REMOVE ----- ----- ----- //
-    
+
     // Delete value
     arraylist_remove(list, 0);
 
@@ -62,6 +70,17 @@ int main(void){
 
     // ----- ----- ----- CLEAR ----- ----- ----- //
 
+    // some data
+    for (c = 'A'; c <= 'Z'; c++){
+        arraylist_add(list, &c);
+    }
+    for (c = 'a'; c <= 'z'; c++){
+        arraylist_add(list, &c);
+    }
+
+    printf("\nFrom \"A\" to \"z\"\n");
+    print_arraylist_char(list);
+
     // Clear
     arraylist_clear(list);
 
@@ -69,10 +88,10 @@ int main(void){
     print_arraylist_char(list);
 
     // ----- ----- ----- OPTIMIZE ----- ----- ----- //
-    
+
     printf("\nOPTIMIZE\nBEFORE: Allocated space == %zu\n", list->capacity);
     arraylist_optimize(list);
-    printf("AFTER:  Allocated space == %zu\n", list->capacity);
+    printf("AFTER:  Allocated space == %zu <- MIN SIZE\n", list->capacity);
     
     // Free
     arraylist_free(list);
@@ -99,7 +118,7 @@ int main(void){
     list = arraylist_create(float);
     
     for (float number_d = 11.11; number_d < 60; number_d += 11.11){
-        arraylist_add(list, number_d);
+        arraylist_add(list, &number_d);
     }
 
     arraylist *copy = arraylist_clone(list);
@@ -124,13 +143,15 @@ int main(void){
     arraylist_set_handler(list, arraylist_free);
     
     unsigned number = 0;
+    arraylist *buffer;
 
-    for(unsigned i = 0; i < 22; i++){
-        arraylist_add(list, arraylist_create(unsigned));
+    for(unsigned i = 0; i < 12; i++){
+        arraylist *buffer = arraylist_create(unsigned);
+        arraylist_add(list, &buffer);
 
-        arraylist *buffer = *(arraylist **)(arraylist_get(list, i));
         for(unsigned j = 0; j < 6; j++){
-            arraylist_add(buffer, number++);
+            arraylist_add(buffer, &number);
+            number++;
         }
     }
     
